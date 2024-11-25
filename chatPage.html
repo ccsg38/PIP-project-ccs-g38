@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Namma Rakshane</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="./styles/chat.css">
+    <style>
+        .chat-container {
+            height: 70vh;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .chat-message {
+            margin: 10px 0;
+        }
+        .user-message {
+            text-align: right;
+        }
+        .reply-message {
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .speak-button {
+            background: transparent;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .emergency-button {
+            background-color: red;
+            color: white;
+            border: none;
+        }
+        .call-button {
+            background-color: green;
+            color: white;
+            border: none;
+            padding: 10px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .call-button:hover {
+            background-color: darkgreen;
+        }
+        .hospital-info-box {
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .hospital-info-box h5 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #28a745;
+        }
+        .hospital-info-box p {
+            margin: 5px 0;
+        }
+        .hospital-info-box a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .hospital-info-box a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 id="memberName"></h2>
+            <button class="emergency-button" onclick="showEmergencyAlert()">Emergency</button>
+        </div>
+        <p class="text-muted" id="chatPrompt">How can I help you today?</p>
+        <div class="chat-container" id="chatContainer"></div>
+        
+        <form id="chatForm" class="input-group">
+            <input type="text" id="chatInput" class="form-control" placeholder="Type your message here..." required>
+            <div class="input-group-append">
+                <button class="btn btn-primary" type="submit" id="sendButtonText">Send</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const hospitals = [
+    { name: "Hospital A", coords: [13.168613521032787, 77.53557481369592], special: "Cardiologist", phone: "123-456-7890" },
+    { name: "Hospital B", coords: [13.171424601914898, 77.55850195355761], special: "Pediatrician", phone: "234-567-8901" },
+    { name: "Hospital C", coords: [13.173172839820902, 77.56418840797744], special: "Orthopedist", phone: "345-678-9012" },
+    { name: "Hospital D", coords: [13.175426214442844, 77.56448651086265], special: "Neurologist", phone: "456-789-0123" },
+    { name: "Hospital E", coords: [13.170637870434978, 77.56424801864924], special: "General Surgeon", phone: "567-890-1234" },
+    { name: "Hospital F", coords: [13.120664836279682, 77.61748349328111], special: "Dermatologist", phone: "678-901-2345" },
+    { name: "Hospital G", coords: [13.097686120749552, 77.56724586929384], special: "Gynecologist", phone: "789-012-3456" },
+    { name: "Hospital H", coords: [13.099775183526974, 77.57973377928938], special: "Ophthalmologist", phone: "890-123-4567" },
+    { name: "Hospital I", coords: [13.100053723891477, 77.58154500287652], special: "Urologist", phone: "901-234-5678" },
+    { name: "Hospital J", coords: [13.10553162034793, 77.57715993524451], special: "Oncologist", phone: "012-345-6789" },
+    { name: "Hospital K", coords: [13.103813987968271, 77.58397585558558], special: "Gastroenterologist", phone: "123-456-7890" },
+    { name: "Hospital L", coords: [13.096850490676257, 77.58926653501116], special: "Psychiatrist", phone: "234-567-8901" },
+    { name: "Hospital M", coords: [13.094854251802156, 77.5985609718399], special: "Emergency Medicine", phone: "345-678-9012" },
+    { name: "Hospital N", coords: [13.098614595283138, 77.59813199783241], special: "Radiologist", phone: "456-789-0123" },
+    { name: "Hospital O", coords: [13.108123927547845, 77.59089767834564], special: "Gastroenterology", phone: "567-890-2345" },
+    { name: "Hospital P", coords: [13.110413124195873, 77.59872783656878], special: "Gastroenterologist", phone: "678-901-3456" },
+    { name: "Hospital Q", coords: [13.112692576529062, 77.61234567023801], special: "Nephrologist", phone: "789-012-4567" },
+    { name: "Hospital R", coords: [13.114472804616473, 77.62487622369531], special: "Pulmonologist", phone: "890-123-5678" },
+    { name: "Hospital S", coords: [13.115693240596681, 77.62923900145613], special: "Hematologist", phone: "901-234-6789" },
+    { name: "Hospital T", coords: [13.120541236871745, 77.63592112172515], special: "Rheumatologist", phone: "012-345-7890" },
+    { name: "Hospital U", coords: [13.125473107958201, 77.64078111230526], special: "Allergist", phone: "123-456-8901" },
+    { name: "Hospital V", coords: [13.130345324130777, 77.64313582148974], special: "Endocrinologist", phone: "234-567-9012" },
+    { name: "Hospital W", coords: [13.135843095346171, 77.65126447958203], special: "Anesthesiologist", phone: "345-678-0123" },
+    { name: "Hospital X", coords: [13.140938249032122, 77.65809432047976], special: "Plastic Surgeon", phone: "456-789-1234" },
+    { name: "Hospital Y", coords: [13.145832983731968, 77.66754621443207], special: "Pediatric Cardiologist", phone: "567-890-2345" },
+    { name: "Hospital Z", coords: [13.150123487380214, 77.67494532317629], special: "Vascular Surgeon", phone: "678-901-3456" },
+    { name: "Hospital AA", coords: [13.155713249034774, 77.68502921844532], special: "Infectious Disease Specialist", phone: "789-012-4567" },
+    { name: "Hospital AB", coords: [13.160520146079594, 77.69084543146592], special: "Podiatrist", phone: "890-123-5678" },
+    { name: "Hospital AC", coords: [13.165309827827564, 77.69543161456743], special: "Geriatrician", phone: "901-234-6789" },
+    { name: "Hospital AD", coords: [13.170204965944299, 77.70512804583455], special: "Sports Medicine", phone: "012-345-7890" },
+    { name: "Hospital AE", coords: [13.175640274862303, 77.71509134784802], special: "Plastic and Reconstructive Surgeon", phone: "123-456-8901" },
+    { name: "Hospital AF", coords: [13.18031234609834, 77.72537821658104], special: "Obstetrician", phone: "234-567-9012" },
+    { name: "Hospital AG", coords: [13.185053941249801, 77.7356233482049], special: "Neuropsychologist", phone: "345-678-0123" },
+    { name: "Hospital AH", coords: [13.19025075236691, 77.74548711263466], special: "Gastroenterology", phone: "456-789-1234" },
+    { name: "Hospital AI", coords: [13.195463720543785, 77.7552811323645], special: "Pathologist", phone: "567-890-2345" },
+];
+
+
+
+        const chatContainer = document.getElementById('chatContainer');
+        const memberNameElement = document.getElementById('memberName');
+        const chatForm = document.getElementById('chatForm');
+        const chatInput = document.getElementById('chatInput');
+        const chatPrompt = document.getElementById('chatPrompt');
+        const sendButtonText = document.getElementById('sendButtonText');
+
+        // Load the selected language from localStorage
+        const language = localStorage.getItem('language') || 'en';
+
+        // Translation object
+        const translations = {
+            en: {
+                memberGreeting: "Hi",
+                chatPrompt: "How can I help you today?",
+                sendButtonText: "Send",
+            },
+            hi: {
+                memberGreeting: "नमस्ते",
+                chatPrompt: "मैं आपकी किस प्रकार मदद कर सकता हूँ?",
+                sendButtonText: "भेजें",
+            },
+            kn: {
+                memberGreeting: "ಹೆಲೋ",
+                chatPrompt: "ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಬಹುದು?",
+                sendButtonText: "ಹೊರಹಾಕಿ",
+            },
+            te: {
+                memberGreeting: "హలో",
+                chatPrompt: "నేను మీకు ఎలా సహాయం చేయగలను?",
+                sendButtonText: "పంపండి",
+            }
+        };
+
+        // Get member details from localStorage
+        const member = JSON.parse(localStorage.getItem('currentMember'));
+
+        // Set member name on the page
+        if (member) {
+            memberNameElement.innerText = `${translations[language].memberGreeting} ${member.name}`;
+        }
+
+        // Set chat prompt and button text based on selected language
+        chatPrompt.innerText = translations[language].chatPrompt;
+        sendButtonText.innerText = translations[language].sendButtonText;
+
+        // Show Emergency Alert
+        function showEmergencyAlert() {
+            window.location.href = 'hospital.html';
+        }
+
+        // Handle form submission
+        chatForm.onsubmit = async (event) => {
+            event.preventDefault();
+            const message = `"${chatInput.value}" give reply in "${language}" language full`;
+            console.log(message);
+            appendMessage(message, 'user');
+            chatInput.value = '';
+
+            // Send message to the backend with selected language
+            try {
+                const response = await fetch('http://localhost:8000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message,
+                        memberName: member.name,
+                        dob: member.dob,
+                        gender: member.gender,
+                        diseases: member.diseases,
+                    }),
+                });
+
+                if (response.ok) {
+                    const reply = await response.json();
+                    const replyMessage = reply.message;
+                    const hospitalInfo = findMatchingHospital(replyMessage);
+
+                    if (hospitalInfo) {
+                        appendMessage(`${replyMessage}`, 'reply');
+                        appendHospitalInfoBox(hospitalInfo);
+                    } else {
+                        appendMessage(replyMessage, 'reply');
+                    }
+                } else {
+                    appendMessage("Error: Unable to get reply", 'reply');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                appendMessage("Error: Unable to communicate with server", 'reply');
+            }
+        };
+
+        // Check if any hospital matches the specialty in the AI's response
+        function findMatchingHospital(replyMessage) {
+            for (const hospital of hospitals) {
+                if (replyMessage.toLowerCase().includes(hospital.special.toLowerCase())) {
+                    return hospital;
+                }
+            }
+            return null;
+        }
+
+        // Append message to the chat container
+        function appendMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${type === 'user' ? 'user-message' : 'reply-message'}`;
+            messageDiv.innerHTML = message;
+            
+            // Add "Speak Up" button with emoji for reply message
+            if (type === 'reply') {
+                const speakButton = document.createElement('button');
+                speakButton.className = 'speak-button';
+                speakButton.innerHTML = '🔊'; // Speak Emoji
+                speakButton.onclick = () => speakReply(message);
+                messageDiv.appendChild(speakButton);
+            }
+
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight; // Scroll to the bottom
+        }
+
+        // Function to trigger Text-to-Speech API
+        async function speakReply(message) {
+            try {
+                const response = await fetch('http://127.0.0.1:8080/text-to-speech/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: message, language: language })
+                });
+
+                if (response.ok) {
+                    console.log('Audio is playing locally.');
+                } else {
+                    console.error('Text-to-Speech API error:', response.statusText);
+                }
+            } catch (error) {
+                console.error("Text-to-Speech Error:", error);
+            }
+        }
+
+        // Append hospital information in a styled box
+        function appendHospitalInfoBox(hospital) {
+            const hospitalBox = document.createElement('div');
+            hospitalBox.className = 'hospital-info-box';
+            
+            hospitalBox.innerHTML = `
+                <h5>${hospital.name} - ${hospital.special}</h5>
+                <p>Phone: ${hospital.phone}</p>
+                <p><a href="https://www.google.com/maps?q=${hospital.coords[0]},${hospital.coords[1]}" target="_blank">View on Google Maps</a></p>
+                <button class="btn btn-ambulance btn-block" onclick="alert('This feature needs to be integrated!')">Call Ambulance</button>
+            `;
+            chatContainer.appendChild(hospitalBox);
+
+            // Add call button
+            appendCallButton(hospital.phone);
+        }
+
+        // Append call button
+        function appendCallButton(phone) {
+            const callButton = document.createElement('button');
+            callButton.className = 'call-button';
+            callButton.innerText = 'Call Now';
+            callButton.onclick = () => window.location.href = `tel:${phone}`;
+            chatContainer.appendChild(callButton);
+        }
+    </script>
+</body>
+</html>

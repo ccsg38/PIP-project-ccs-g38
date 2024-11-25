@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearby Emergency Hospitals</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="./styles/hospital.css">
+    <style>
+        body {
+            background-color: #eef2f3;
+        }
+        .hospital-card {
+            border-radius: 10px;
+            padding: 10px; /* Reduced padding */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            margin: 5px; /* Reduced margin */
+            cursor: pointer; /* Pointer cursor for cards */
+        }
+        .hospital-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+        }
+        #map {
+            height: 400px;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .highlight {
+            color: #28a745;
+        }
+        .modal-header {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-ambulance {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-ambulance:hover {
+            background-color: #c82333;
+        }
+        .btn-emergency {
+            background-color: #ffc107;
+            color: white;
+            padding: 5px 10px; /* Smaller button */
+            font-size: 0.9em; /* Slightly smaller text */
+        }
+        .btn-emergency:hover {
+            background-color: #e0a800;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Nearby Emergency Hospitals</h1>
+        <button id="getLocation" class="btn btn-emergency btn-block">Emergency: Find Nearest Hospital</button>
+        <div id="nearestHospital" class="text-center mt-3"></div>
+
+        <div id="hospitals" class="mt-4 row"></div>
+        <div id="map"></div>
+    </div>
+
+    <!-- Modal for hospital details -->
+    <div class="modal fade" id="hospitalModal" tabindex="-1" aria-labelledby="hospitalModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="hospitalModalLabel"></h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="hospitalDetails"></p>
+                    <button class="btn btn-ambulance btn-block" onclick="alert('This feature needs to be integrated!')">Call Ambulance</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+    <script>
+        const hospitals = [
+    { name: "Hospital A", coords: [13.168613521032787, 77.53557481369592], special: "Cardiology", phone: "123-456-7890" },
+    { name: "Hospital B", coords: [13.171424601914898, 77.55850195355761], special: "Pediatrics", phone: "234-567-8901" },
+    { name: "Hospital C", coords: [13.173172839820902, 77.56418840797744], special: "Orthopedics", phone: "345-678-9012" },
+    { name: "Hospital D", coords: [13.175426214442844, 77.56448651086265], special: "Neurology", phone: "456-789-0123" },
+    { name: "Hospital E", coords: [13.170637870434978, 77.56424801864924], special: "General Surgery", phone: "567-890-1234" },
+    { name: "Hospital F", coords: [13.120664836279682, 77.61748349328111], special: "Dermatology", phone: "678-901-2345" },
+    { name: "Hospital G", coords: [13.097686120749552, 77.56724586929384], special: "Gynecology", phone: "789-012-3456" },
+    { name: "Hospital H", coords: [13.099775183526974, 77.57973377928938], special: "Ophthalmology", phone: "890-123-4567" },
+    { name: "Hospital I", coords: [13.100053723891477, 77.58154500287652], special: "Urology", phone: "901-234-5678" },
+    { name: "Hospital J", coords: [13.10553162034793, 77.57715993524451], special: "Oncology", phone: "012-345-6789" },
+    { name: "Hospital K", coords: [13.103813987968271, 77.58397585558558], special: "Gastroenterology", phone: "123-456-7890" },
+    { name: "Hospital L", coords: [13.096850490676257, 77.58926653501116], special: "Psychiatry", phone: "234-567-8901" },
+    { name: "Hospital M", coords: [13.094854251802156, 77.5985609718399], special: "Emergency Medicine", phone: "345-678-9012" },
+    { name: "Hospital N", coords: [13.098614595283138, 77.59813199783241], special: "Radiology", phone: "456-789-0123" },
+];
+
+
+        document.getElementById("getLocation").onclick = function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition);
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        };
+
+        function showPosition(position) {
+            const userCoords = [position.coords.latitude, position.coords.longitude];
+            displayHospitals(userCoords);
+            const nearestHospital = findNearestHospital(userCoords);
+            document.getElementById("nearestHospital").innerHTML = `<h2>Nearest Hospital: ${nearestHospital.name}</h2><br><p> ${nearestHospital.phone}`;
+            initMap(userCoords, nearestHospital.coords);
+        }
+
+        function displayHospitals(userCoords) {
+            const hospitalsDiv = document.getElementById("hospitals");
+            hospitalsDiv.innerHTML = ''; // Clear previous content
+            hospitals.forEach(hospital => {
+                const distance = calculateDistance(userCoords, hospital.coords).toFixed(2);
+                const bgColor = getBackgroundColor(distance);
+                hospitalsDiv.innerHTML += `
+                    <div class="col-sm-6 col-md-4 col-lg-3">
+                        <div class="hospital-card" style="background-color: ${bgColor};" onclick="showHospitalDetails('${hospital.name}', '${hospital.special}')">
+                            <strong>${hospital.name}</strong>
+                            <p>Distance: ${distance} km <br> Call: ${hospital.phone}<br> Special: ${hospital.special}</p>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function getBackgroundColor(distance) {
+            if (distance < 5) return '#d4edda'; // Green for nearby
+            if (distance < 10) return '#fff3cd'; // Yellow for moderate distance
+            return '#f8d7da'; // Red for far away
+        }
+
+        function showHospitalDetails(name, special) {
+            document.getElementById("hospitalModalLabel").innerText = name;
+            document.getElementById("hospitalDetails").innerText = `Specialty: ${special}`;
+            $('#hospitalModal').modal('show');
+        }
+
+        function findNearestHospital(userCoords) {
+            let nearest = hospitals[0];
+            let minDistance = calculateDistance(userCoords, nearest.coords);
+            hospitals.forEach(hospital => {
+                const distance = calculateDistance(userCoords, hospital.coords);
+                if (distance < minDistance) {
+                    nearest = hospital;
+                    minDistance = distance;
+                }
+            });
+            return nearest;
+        }
+
+        function calculateDistance(coords1, coords2) {
+            const R = 6371; // Radius of the Earth in km
+            const dLat = deg2rad(coords2[0] - coords1[0]);
+            const dLon = deg2rad(coords2[1] - coords1[1]);
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(coords1[0])) * Math.cos(deg2rad(coords2[0])) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c; // Distance in km
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+        function initMap(userCoords, nearestCoords) {
+            const map = L.map('map').setView(userCoords, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+            }).addTo(map);
+
+            // Marker for user's location
+            L.marker(userCoords).addTo(map).bindPopup('You are here!').openPopup();
+
+            // Markers for all hospitals
+            hospitals.forEach(hospital => {
+                L.marker(hospital.coords).addTo(map).bindPopup(hospital.name);
+            });
+
+            // Marker for the nearest hospital
+            L.marker(nearestCoords, { icon: L.icon({ iconUrl: 'https://via.placeholder.com/25/28a745/ffffff?text=H', className: 'highlight' }) }).addTo(map)
+                .bindPopup('Nearest Hospital: ' + hospitals.find(h => h.coords[0] === nearestCoords[0] && h.coords[1] === nearestCoords[1]).name)
+                .openPopup();
+        }
+    </script>
+</body>
+</html>
